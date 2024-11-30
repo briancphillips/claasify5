@@ -1,9 +1,7 @@
-from .architectures import get_model
-from .data import get_dataset
-from .training import train_model
+"""Model package."""
 
-__all__ = [
-    "get_model",
-    "get_dataset",
-    "train_model",
-]
+from .architectures import WideResNet
+from .factory import get_model
+from .data import get_dataset
+
+__all__ = ["WideResNet", "get_model", "get_dataset"]

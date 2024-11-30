@@ -1,95 +1,95 @@
+"""Dataset loading and preprocessing utilities."""
+
 import torch
+import torchvision
+import torchvision.transforms as transforms
 from torch.utils.data import Dataset, Subset
-from torchvision import datasets, transforms
-import os
-import shutil
-import requests
-import tarfile
-from tqdm import tqdm
-from typing import Optional, Tuple
 import numpy as np
+from pathlib import Path
+from typing import Optional, Tuple
+
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-__all__ = ["get_dataset"]
+
+def get_dataset_stats(dataset_name: str) -> Tuple[list, list]:
+    """Get normalization stats for dataset."""
+    if dataset_name == "cifar100":
+        mean = [0.5071, 0.4867, 0.4408]
+        std = [0.2675, 0.2565, 0.2761]
+    elif dataset_name == "gtsrb":
+        mean = [0.3337, 0.3064, 0.3171]
+        std = [0.2672, 0.2564, 0.2629]
+    elif dataset_name == "imagenette":
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
+    else:
+        raise ValueError(f"Unknown dataset: {dataset_name}")
+    return mean, std
 
 
-def setup_imagenette(data_dir: str) -> None:
-    """Set up ImageNette dataset directory structure."""
-    # ImageNette v2-160 URL
-    url = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz"
-    filename = os.path.join(data_dir, os.path.basename(url))
+def get_transforms(dataset_name: str, train: bool = True) -> transforms.Compose:
+    """Get transforms for dataset."""
+    mean, std = get_dataset_stats(dataset_name)
 
-    # Create directory if it doesn't exist
-    os.makedirs(data_dir, exist_ok=True)
+    if train:
+        if dataset_name == "cifar100":
+            transform = transforms.Compose(
+                [
+                    transforms.RandomCrop(32, padding=4),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+        elif dataset_name == "gtsrb":
+            transform = transforms.Compose(
+                [
+                    transforms.Resize((32, 32)),
+                    transforms.RandomRotation(15),
+                    transforms.RandomAffine(0, translate=(0.1, 0.1)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+        elif dataset_name == "imagenette":
+            transform = transforms.Compose(
+                [
+                    transforms.Resize(256),
+                    transforms.RandomCrop(224),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+    else:
+        if dataset_name == "cifar100":
+            transform = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+        elif dataset_name == "gtsrb":
+            transform = transforms.Compose(
+                [
+                    transforms.Resize((32, 32)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
+        elif dataset_name == "imagenette":
+            transform = transforms.Compose(
+                [
+                    transforms.Resize(256),
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean, std),
+                ]
+            )
 
-    # Check if dataset is already properly set up
-    if os.path.exists(os.path.join(data_dir, "train")) and os.path.exists(
-        os.path.join(data_dir, "val")
-    ):
-        logger.info("ImageNette dataset already set up")
-        return
-
-    # Download file if it doesn't exist
-    if not os.path.exists(filename):
-        logger.info(f"Downloading ImageNette dataset to {filename}")
-        response = requests.get(url, stream=True)
-        total_size = int(response.headers.get("content-length", 0))
-
-        with open(filename, "wb") as f, tqdm(
-            desc=f"Downloading ImageNette",
-            total=total_size,
-            unit="iB",
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as pbar:
-            for data in response.iter_content(chunk_size=1024):
-                size = f.write(data)
-                pbar.update(size)
-
-    # Extract file if needed
-    src_dir = os.path.join(data_dir, "imagenette2-160")
-    if not os.path.exists(src_dir):
-        logger.info(f"Extracting {filename}")
-        with tarfile.open(filename, "r:gz") as tar:
-            tar.extractall(path=data_dir)
-
-    # Move directories to correct location
-    train_src = os.path.join(src_dir, "train")
-    val_src = os.path.join(src_dir, "val")
-    train_dst = os.path.join(data_dir, "train")
-    val_dst = os.path.join(data_dir, "val")
-
-    if not os.path.exists(train_dst):
-        shutil.move(train_src, train_dst)
-    if not os.path.exists(val_dst):
-        shutil.move(val_src, val_dst)
-
-    # Clean up
-    if os.path.exists(src_dir):
-        shutil.rmtree(src_dir)
-    if os.path.exists(filename):
-        os.remove(filename)
-
-    logger.info("ImageNette dataset setup complete")
-
-
-def cleanup_gtsrb(data_dir: str) -> None:
-    """Clean up redundant GTSRB dataset files and directories."""
-    import shutil
-
-    # Remove only zip files after dataset is loaded
-    for f in os.listdir(data_dir):
-        if f.endswith(".zip"):
-            zip_path = os.path.join(data_dir, f)
-            try:
-                os.remove(zip_path)
-                logger.info(f"Removed {f}")
-            except OSError as e:
-                logger.warning(f"Could not remove {f}: {e}")
-
-    logger.info("Cleaned up GTSRB dataset files")
+    return transform
 
 
 def get_dataset(
@@ -98,86 +98,47 @@ def get_dataset(
     subset_size: Optional[int] = None,
     transform: Optional[transforms.Compose] = None,
 ) -> Dataset:
-    """Get dataset by name.
+    """Get dataset with optional subset."""
+    # Create data directory if it doesn't exist
+    data_dir = Path("data")
+    data_dir.mkdir(parents=True, exist_ok=True)
 
-    Args:
-        dataset_name: Name of dataset ('cifar100', 'gtsrb', 'imagenette')
-        train: Whether to get training or test set
-        subset_size: Optional number of samples
-        transform: Optional transform to apply
-
-    Returns:
-        Dataset: The requested dataset
-    """
-    # Set up base transforms if none provided
+    # Get default transforms if none provided
     if transform is None:
-        if dataset_name.lower() == "gtsrb":
-            # GTSRB specific transform to handle varying image sizes
-            transform = transforms.Compose(
-                [
-                    transforms.Resize(
-                        (32, 32), interpolation=transforms.InterpolationMode.BILINEAR
-                    ),
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                    ),
-                ]
+        transform = get_transforms(dataset_name, train)
+
+    # Load dataset
+    if dataset_name == "cifar100":
+        dataset = torchvision.datasets.CIFAR100(
+            root=str(data_dir), train=train, download=True, transform=transform
+        )
+    elif dataset_name == "gtsrb":
+        if train:
+            dataset = torchvision.datasets.GTSRB(
+                root=str(data_dir), split="train", download=True, transform=transform
             )
         else:
-            transform = transforms.Compose(
-                [
-                    transforms.Resize((32, 32)),
-                    transforms.ToTensor(),
-                ]
+            dataset = torchvision.datasets.GTSRB(
+                root=str(data_dir), split="test", download=True, transform=transform
             )
-
-    # Get dataset root directory
-    data_dir = os.path.join("data", dataset_name.lower())
-
-    # Create dataset directory if it doesn't exist
-    os.makedirs(data_dir, exist_ok=True)
-
-    # Load appropriate dataset
-    if dataset_name.lower() == "cifar100":
-        dataset = datasets.CIFAR100(
-            root=data_dir, train=train, download=True, transform=transform
+    elif dataset_name == "imagenette":
+        dataset = torchvision.datasets.ImageFolder(
+            root=str(data_dir / "imagenette2" / ("train" if train else "val")),
+            transform=transform,
         )
-    elif dataset_name.lower() == "gtsrb":
-        split = "train" if train else "test"
-        try:
-            dataset = datasets.GTSRB(
-                root=data_dir, split=split, download=True, transform=transform
-            )
-            # Only clean up zip files after dataset is loaded successfully
-            cleanup_gtsrb(data_dir)
-        except Exception as e:
-            logger.error(f"Error loading GTSRB dataset: {e}")
-            raise
-    elif dataset_name.lower() == "imagenette":
-        # Use existing ImageNette directory structure
-        split = "train" if train else "val"
-        split_dir = os.path.join(data_dir, split)
-        if not os.path.exists(split_dir):
-            raise ValueError(f"ImageNette {split} directory not found: {split_dir}")
-        dataset = datasets.ImageFolder(root=split_dir, transform=transform)
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
-    # Create subset if requested
+    # Create subset if specified
     if subset_size is not None:
-        # Get all indices
-        indices = list(range(len(dataset)))
-        
-        # Randomly select subset_size samples
-        if len(indices) > subset_size:
-            subset_indices = np.random.choice(indices, subset_size, replace=False)
-        else:
-            subset_indices = indices
-            
-        # Create the subset
-        dataset = Subset(dataset, subset_indices)
-        logger.info(f"\nDataset: {dataset_name.upper()}")
-        logger.info(f"Using subset of {len(dataset)} samples")
+        if subset_size > len(dataset):
+            logger.warning(
+                f"Requested subset size {subset_size} is larger than dataset size {len(dataset)}. "
+                "Using full dataset."
+            )
+            return dataset
+
+        indices = torch.randperm(len(dataset))[:subset_size]
+        dataset = Subset(dataset, indices)
 
     return dataset
