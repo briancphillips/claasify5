@@ -26,7 +26,7 @@ A modular and extensible framework for image classification experiments, with su
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/classify5.git
+git clone https://github.com/briancphillips/classify5.git
 cd classify5
 ```
 
@@ -41,6 +41,16 @@ conda activate classify5
 
 ```bash
 pip install -e .
+```
+
+4. Download pretrained model checkpoint:
+
+```bash
+# Create checkpoint directory
+mkdir -p checkpoints/wideresnet
+
+# Download checkpoint
+wget https://github.com/briancphillips/classify5/releases/download/v1.0/wideresnet_best.pt -O checkpoints/wideresnet/wideresnet_best.pt
 ```
 
 ## Project Structure
@@ -63,6 +73,8 @@ classify5/
 ├── examples/              # Example scripts
 │   └── traditional_example.py  # Traditional classifier example
 └── checkpoints/          # Model checkpoints
+    └── wideresnet/       # WideResNet checkpoints
+        └── wideresnet_best.pt  # Pretrained WideResNet-28-10
 ```
 
 ## Quick Start
