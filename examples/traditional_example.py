@@ -150,12 +150,33 @@ def train_model(model, train_loader, val_loader, device, epochs=200):
 
 
 def verify_checkpoint():
-    """Verify that checkpoint exists or train model."""
-    if not Path(CHECKPOINT_PATH).exists():
-        logger.info(
-            f"Checkpoint not found at {CHECKPOINT_PATH}, will train from scratch"
-        )
+    """Verify that checkpoint exists and is fully trained."""
+    checkpoint_path = Path(CHECKPOINT_PATH)
+    needs_training = True
 
+    if checkpoint_path.exists():
+        # Load checkpoint to check epoch
+        checkpoint = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=True)
+        if isinstance(checkpoint, dict) and "epoch" in checkpoint:
+            epoch = checkpoint["epoch"]
+            acc = checkpoint.get("acc", 0.0)
+            logger.info(f"Found checkpoint at epoch {epoch+1} with accuracy {acc:.2f}%")
+            if epoch + 1 >= 200:  # Check if training is complete
+                logger.info("Checkpoint is fully trained (200 epochs)")
+                needs_training = False
+            else:
+                logger.info(f"Checkpoint needs {200 - (epoch+1)} more epochs")
+                needs_training = True
+        else:
+            logger.info("Checkpoint format unknown, will train from scratch")
+            needs_training = True
+    else:
+        logger.info(
+            f"No checkpoint found at {CHECKPOINT_PATH}, will train from scratch"
+        )
+        needs_training = True
+
+    if needs_training:
         # Get datasets with proper transforms
         transform_train = transforms.Compose(
             [
@@ -185,15 +206,15 @@ def verify_checkpoint():
             train_dataset,
             batch_size=128,
             shuffle=True,
-            num_workers=8,  # Increased from 4
+            num_workers=8,
             pin_memory=True,
             drop_last=True,
-            persistent_workers=True,  # Keep workers alive between epochs
-            prefetch_factor=3,  # Prefetch 3 batches per worker
+            persistent_workers=True,
+            prefetch_factor=3,
         )
         val_loader = DataLoader(
             val_dataset,
-            batch_size=256,  # Increased for faster validation
+            batch_size=256,
             shuffle=False,
             num_workers=8,
             pin_memory=True,

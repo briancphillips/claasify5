@@ -141,7 +141,9 @@ class TraditionalExperiment:
         # Load checkpoint if available
         if self.checkpoint_path and Path(self.checkpoint_path).exists():
             logger.info(f"Loading checkpoint from {self.checkpoint_path}")
-            checkpoint = torch.load(self.checkpoint_path, map_location=self.device)
+            checkpoint = torch.load(
+                self.checkpoint_path, map_location=self.device, weights_only=True
+            )
 
             # Handle different checkpoint formats
             if "model_state_dict" in checkpoint:
