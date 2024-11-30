@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="classify5",
     version="0.1",
-    packages=find_packages(),
+    packages=find_packages(include=["config*", "models*", "experiments*", "utils*"]),
     install_requires=[
         "torch>=2.0.0",
         "torchvision>=0.15.0",
@@ -19,4 +19,5 @@ setup(
         "rich>=13.6.0",
         "scikit-learn>=1.0.0",
     ],
+    python_requires=">=3.10",
 )
