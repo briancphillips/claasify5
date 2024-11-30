@@ -1,0 +1,54 @@
+# This file only contains experiment-specific overrides.
+# Default values are defined in config/defaults.py
+
+# Execution configuration
+execution:
+  max_workers: 1  # Number of parallel experiments to run
+  gpu_ids: [0]   # List of GPU IDs to use
+
+# Output configuration
+output:
+  base_dir: "results"
+  save_model: true
+  save_frequency: 10
+  consolidated_file: "all_results.csv"
+
+# Dataset-specific overrides
+dataset_overrides:
+  cifar100:
+    epochs: 5  # Override for faster experimentation
+  gtsrb:
+    epochs: 5  # Override for faster experimentation
+
+# Experiment groups
+experiment_groups:
+  basic_comparison:
+    description: "Basic comparison of all attacks across datasets"
+    experiments:
+      - name: cifar100_all_attacks
+        dataset: cifar100
+        attacks: [pgd, ga, label_flip]
+      
+      - name: gtsrb_all_attacks
+        dataset: gtsrb
+        subset_size: 10
+        attacks: [pgd, ga, label_flip]
+      
+      - name: imagenette_all_attacks
+        dataset: imagenette
+        subset_size: 10
+        attacks: [pgd, ga, label_flip]
+
+  label_flip_variants:
+    description: "Different variants of label flip attacks"
+    experiments:
+      - name: cifar100_random_to_target
+        dataset: cifar100
+        attack: label_flip
+        target_class: 0
+      
+      - name: cifar100_source_to_target
+        dataset: cifar100
+        attack: label_flip
+        source_class: 1
+        target_class: 0
