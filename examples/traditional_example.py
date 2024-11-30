@@ -39,13 +39,40 @@ def train_model(model, train_loader, val_loader, device, epochs=200):
         optimizer, milestones=milestones, gamma=0.2
     )
 
+    # Try to load checkpoint
+    start_epoch = 0
     best_acc = 0.0
+    if Path(CHECKPOINT_PATH).exists():
+        logger.info(f"Resuming from checkpoint: {CHECKPOINT_PATH}")
+        checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
+        if isinstance(checkpoint, dict) and "epoch" in checkpoint:
+            start_epoch = checkpoint["epoch"] + 1
+            best_acc = checkpoint.get("acc", 0.0)
+            if "model_state_dict" in checkpoint:
+                model.load_state_dict(checkpoint["model_state_dict"])
+            elif "state_dict" in checkpoint:
+                model.load_state_dict(checkpoint["state_dict"])
+            else:
+                model.load_state_dict(checkpoint)
+            if "optimizer_state_dict" in checkpoint:
+                optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            if "scheduler_state_dict" in checkpoint:
+                scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+            logger.info(
+                f"Resuming from epoch {start_epoch} with best accuracy: {best_acc:.2f}%"
+            )
+
     model = model.to(device)
     model = torch.nn.DataParallel(model)  # Enable multi-GPU training
 
     scaler = torch.cuda.amp.GradScaler()  # Enable automatic mixed precision
 
-    for epoch in range(epochs):
+    # Skip training if we've already completed all epochs
+    if start_epoch >= epochs:
+        logger.info(f"Training already completed ({start_epoch} epochs)")
+        return True
+
+    for epoch in range(start_epoch, epochs):
         # Training
         model.train()
         train_loss = 0
@@ -108,6 +135,8 @@ def train_model(model, train_loader, val_loader, device, epochs=200):
             best_acc = acc
             state = {
                 "model_state_dict": model.module.state_dict(),  # Save without DataParallel
+                "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
                 "acc": acc,
                 "epoch": epoch,
             }
@@ -116,7 +145,7 @@ def train_model(model, train_loader, val_loader, device, epochs=200):
 
         scheduler.step()
 
-    logger.info(f"Best accuracy: {best_acc:.2f}%")
+    logger.info(f"Training completed. Best accuracy: {best_acc:.2f}%")
     return best_acc > 50
 
 
