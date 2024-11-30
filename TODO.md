@@ -1,63 +1,51 @@
-# TODO List
+# Project TODO List
 
-## Remove Hardcoded Values
+## Overall Goals
 
-### poison.py
-- [ ] Move DataLoader parameters to config:
-  ```python
-  poisoned_loader = DataLoader(
-      poisoned_dataset,
-      batch_size=128,  # Should come from config
-      shuffle=True,
-      num_workers=4,  # Should come from config
-      pin_memory=True
-  )
-  ```
+- [ ] Run traditional classifiers (KNN, LR, RF, SVM) against clean/poisoned data
+- [ ] Compare performance between clean and poisoned datasets
+- [ ] Analyze feature space differences between clean and poisoned samples
+- [ ] Visualize results and create comprehensive analysis
 
-### run_experiments.py
-- [ ] Remove hardcoded default poison_ratio:
-  ```python
-  "--poison-ratio", str(experiment.get("poison_ratio", 0.1))  # Remove hardcoded 0.1
-  ```
-  - Should use value from POISON_DEFAULTS instead
+## Immediate Tasks
 
-### traditional_classifiers.py
-- [ ] Move classifier hyperparameters to config:
-  ```python
-  "KNN": KNeighborsClassifier(n_neighbors=3),  # Move to config
-  "logistic_regression": LogisticRegression(max_iter=1000),  # Move to config
-  "random_forest": RandomForestClassifier(n_estimators=100),  # Move to config
-  ```
+1. [ ] Test Imagenette pipeline with small sample size (500 samples)
+2. [ ] Implement proper feature visualization for analysis
+3. [ ] Add support for poisoned data loading and comparison
 
-### Add New Config Sections in defaults.py
-- [ ] Add DATALOADER_DEFAULTS:
-  ```python
-  DATALOADER_DEFAULTS = {
-      "batch_size": 128,
-      "num_workers": 4,
-      "pin_memory": True,
-      "shuffle": True
-  }
-  ```
+## GTSRB Tasks (Paused)
 
-- [ ] Add TRADITIONAL_CLASSIFIER_DEFAULTS:
-  ```python
-  TRADITIONAL_CLASSIFIER_DEFAULTS = {
-      "knn": {
-          "n_neighbors": 3
-      },
-      "logistic_regression": {
-          "max_iter": 1000
-      },
-      "random_forest": {
-          "n_estimators": 100
-      }
-  }
-  ```
+- [ ] Train GTSRB model to get better feature extraction (currently 3-4% accuracy with untrained model)
+- [ ] Create or obtain poisoned GTSRB dataset
+- [ ] Run full GTSRB experiments with trained model
+- [ ] Compare clean vs poisoned performance
 
-## Performance Optimizations
+## Infrastructure Improvements
 
-### Gradient Ascent Attack
-- [ ] Evaluate and potentially reduce `ga_iterations` (currently 100) as it may be more than necessary
-- [ ] Consider adding early stopping if attack succeeds before max iterations
-- [ ] Experiment with different batch sizes (currently 32) to find optimal GPU utilization
+- [ ] Add checkpoint saving/loading for trained models
+- [ ] Implement proper progress tracking during feature extraction
+- [ ] Add experiment history tracking
+- [ ] Improve logging configuration (currently seeing duplicate initialization)
+- [ ] Add proper error handling for dataset loading
+
+## Analysis & Visualization
+
+- [ ] Implement t-SNE/UMAP visualization of feature spaces
+- [ ] Add confusion matrix visualization
+- [ ] Create performance comparison plots
+- [ ] Generate statistical analysis of classifier performance
+
+## Documentation
+
+- [ ] Document dataset preparation process
+- [ ] Add instructions for running experiments
+- [ ] Create analysis pipeline documentation
+- [ ] Add requirements and setup instructions
+
+## Future Enhancements
+
+- [ ] Add support for more datasets
+- [ ] Implement additional classifiers if needed
+- [ ] Add cross-validation support
+- [ ] Create automated test suite
+- [ ] Add experiment configuration validation

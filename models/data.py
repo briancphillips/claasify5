@@ -122,10 +122,25 @@ def get_dataset(
                 root=str(data_dir), split="test", download=True, transform=transform
             )
     elif dataset_name == "imagenette":
-        dataset = torchvision.datasets.ImageFolder(
-            root=str(data_dir / "imagenette2" / ("train" if train else "val")),
-            transform=transform,
-        )
+        try:
+            # Try loading without download first
+            dataset = torchvision.datasets.Imagenette(
+                root=str(data_dir),
+                split="train" if train else "val",
+                download=False,
+                transform=transform,
+            )
+            logger.info("Successfully loaded existing ImageNette dataset")
+        except RuntimeError:
+            # If that fails, try downloading
+            logger.info("Downloading ImageNette dataset...")
+            dataset = torchvision.datasets.Imagenette(
+                root=str(data_dir),
+                split="train" if train else "val",
+                download=True,
+                transform=transform,
+            )
+            logger.info("ImageNette dataset downloaded and loaded")
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 

@@ -1,5 +1,6 @@
 """Model factory functions."""
 
+import torch
 import torch.nn as nn
 import torchvision.models as models
 from .architectures import WideResNet
