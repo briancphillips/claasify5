@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="classify5",
     version="0.1",
-    packages=find_packages(include=["config*", "models*", "experiments*", "utils*"]),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=[
         "torch>=2.0.0",
         "torchvision>=0.15.0",
