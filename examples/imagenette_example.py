@@ -19,13 +19,22 @@ from models.data import get_dataset
 from models.factory import get_model
 from utils.logging import setup_logging, get_logger
 
+# Set up logging first thing
+setup_logging(level=logging.INFO)
+logger = get_logger(__name__)
+
+# Check for existing checkpoint
+CHECKPOINT_DIR = Path("checkpoints")
+CHECKPOINT_PATH = CHECKPOINT_DIR / "imagenette_best.pt"
+if CHECKPOINT_PATH.exists():
+    logger.info(f"Found checkpoint at {CHECKPOINT_PATH}")
+else:
+    logger.warning("No checkpoint found, will use untrained model")
+    CHECKPOINT_PATH = None
+
 
 def run_imagenette_experiment(subset_size=None):
     """Run ImageNette experiment."""
-    # Set up logging first
-    setup_logging(level=logging.INFO)
-    logger = get_logger(__name__)
-
     logger.info(f"Starting ImageNette experiment (subset_size={subset_size})")
     logger.info("Python process is running...")
 
@@ -36,7 +45,7 @@ def run_imagenette_experiment(subset_size=None):
             config=create_experiment_config(
                 dataset_name="imagenette",
                 model_name="imagenette-net",  # This is the model we want to use
-                checkpoint_path=None,  # No checkpoint for now
+                checkpoint_path=CHECKPOINT_PATH,  # Use checkpoint if available
                 batch_size=16,  # Smaller batch size for memory (224x224 images)
             ),
             subset_size=subset_size,
