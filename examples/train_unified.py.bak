@@ -247,7 +247,7 @@ def main(args):
     checkpoint_dir = Path("checkpoints")
     checkpoint_dir.mkdir(exist_ok=True)
     checkpoint_path = checkpoint_dir / f"{args.dataset}_best.pt"
-    latest_checkpoint_path = checkpoint_dir / f"{args.dataset}_latest.pt"
+latest_checkpoint_path = checkpoint_dir / f"{args.dataset}_latest.pt"
     # Load checkpoint if resuming
     start_epoch = 1
     best_acc = 0.0

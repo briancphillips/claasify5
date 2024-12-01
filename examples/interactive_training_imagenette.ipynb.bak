@@ -366,8 +366,6 @@
     "                    'history': history  # Save training history\n",
     "                }\n",
     "                torch.save(state, CHECKPOINT_PATH)\n",
-                # Also save latest state
-                torch.save(state, LATEST_CHECKPOINT_PATH)
     "            \n",
     "            scheduler.step()\n",
     "        \n",
