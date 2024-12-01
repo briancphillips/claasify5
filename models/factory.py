@@ -42,27 +42,32 @@ class GTSRBNet(nn.Module):
 
 
 class ImageNetteNet(nn.Module):
-    """ResNet50-based architecture for ImageNette."""
+    """ResNet18-based architecture for ImageNette optimized for smaller images."""
 
     def __init__(self, num_classes=10):
         super(ImageNetteNet, self).__init__()
-        # Use latest ResNet50 weights
-        model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
-
+        # Use ResNet18 instead of ResNet50 for smaller memory footprint
+        model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        
+        # Modify first conv layer for smaller input
+        model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        model.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)  # Smaller pooling
+        
         # Remove final FC layer
-        self.features = nn.Sequential(*list(model.children())[:-1])
-
-        # Add custom classifier with dropout
+        self.features = nn.Sequential(*list(model.children())[:-2])
+        
+        # Add custom classifier with reduced dimensions
         self.classifier = nn.Sequential(
-            nn.Linear(2048, 512),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(512, 256),  # Reduced from 2048
             nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(512, num_classes),
+            nn.Dropout(0.3),  # Reduced dropout
+            nn.Linear(256, num_classes)
         )
 
     def forward(self, x):
         x = self.features(x)
-        x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x
 
